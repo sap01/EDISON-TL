@@ -1,0 +1,30 @@
+PackratFormat: 1.4
+PackratVersion: 0.4.9.3
+RVersion: 3.5.1
+Repos: CRAN=https://cloud.r-project.org
+
+Package: EDISON
+Source: CRAN
+Version: 1.1.1
+Hash: 65b894c801e558773d4eabc5f81401ed
+Requires: MASS, corpcor
+
+Package: MASS
+Source: CRAN
+Version: 7.3-50
+Hash: e8001243da35880bd81391d80eb4eeae
+
+Package: corpcor
+Source: CRAN
+Version: 1.6.9
+Hash: f641167f85158bfc7cd4b97ac1c26701
+
+Package: packrat
+Source: CRAN
+Version: 0.4.9-3
+Hash: 03fb817297975f1da0d1b774b47620b3
+
+Package: rjson
+Source: CRAN
+Version: 0.2.20
+Hash: 44ee331003bf03b92e97b3089461dd2f
