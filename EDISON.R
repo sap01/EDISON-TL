@@ -44,6 +44,35 @@
 ##
 ## Output: Time-varying Gene Regulatory Networks and a corresponding rolled up network.
 ##
+##################################################################################
+## Begin: How to calculate performance metrics when the true network (s) is known
+##################################################################################
+## If the true network is a single time-invariant network then do the following:
+## source('outdir_to_rolled.R')
+## ## OutdirToRolled <- function(out.dir.name, edge.post.prob.threshold, roll.method, allow.self.loop, series.combn.method)
+## E.g., rolled.net.adj.matrix <- OutdirToRolled('Ds10n_0_output20180402174237', 0.75, 'any', FALSE, 'any')
+##
+## Loads obj 'true.net.adj.matrix'
+## load('asset/DREAM3GoldStandard_InSilicoSize10_Yeast1_TrueNet.RData')
+##
+## source('calc_perf_di_net.R')
+## Result <- CalcPerfDiNet(rolled.net.adj.matrix, true.net.adj.matrix)
+## print(Result)
+##----------------------------------------------------------------------------
+## Else if the true networks are time-varying then do the following:
+## source('outdir_to_unrolled.R')
+## ## OutdirToUnrolled <- function(out.dir.name, edge.post.prob.threshold, allow.self.loop, series.combn.method)
+## E.g., unrolled.net.adj.matrices <- OutdirToUnrolled('Ed1_0_output20180402174237', 0.75, FALSE, 'any')
+##
+## Loads obj 'true.net.adj.matrix'
+## load('asset/edi.net.1.adj.mx.RData')
+##
+## source('calc_perf_di_net.R')
+## Result <- CalcPerfDiNetUnrolled(unrolled.net.adj.matrices, true.net.adj.matrix)
+##################################################################################
+## End: How to calculate performance metrics when the true network (s) is known
+##################################################################################
+##
 ## Remove all objects in the current workspace
 rm(list = ls())
 

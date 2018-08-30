@@ -1,7 +1,11 @@
+## Goal: Calculate performance metrics of predicted rolled or unrolled 
+## Dynamic Bayesian Nets (DBNs).
+##
+###########################################################################
 ## Goal: Calculate performance metrics of the predicted directed net 
 ## adjacency matrix 'predicted.net.adj.matrix' w.r.t. 
 ## the true directed net adjacency matrix 'true.net.adj.matrix'.
-##
+###########################################################################
 CalcPerfDiNet <-function(predicted.net.adj.matrix, true.net.adj.matrix)
 {
   if ((nrow(predicted.net.adj.matrix) != nrow(true.net.adj.matrix)) | 
@@ -108,3 +112,43 @@ CalcPerfDiNet <-function(predicted.net.adj.matrix, true.net.adj.matrix)
   
   return (Result)
 }
+###########################################################################
+
+###########################################################################
+## Goal: Calculate performance metrics of the predicted unrolled net 
+## adjacency matrices 'unrolled.net.adj.matrices' w.r.t. 
+## the true unrolled net adjacency matrix 'true.net.adj.matrices'.
+###########################################################################
+CalcPerfDiNetUnrolled <- function(unrolled.net.adj.matrices, true.net.adj.matrices) {
+  
+  #------------------------------------------------------------
+  ## Begin: Create the format for result
+  #------------------------------------------------------------
+  Result <- matrix(0, nrow = 1, ncol = 11)
+  colnames(Result) <- list('TP', 'TN', 'FP', 'FN', 'TPR', 'FPR', 'FDR', 'PPV', 'ACC', 'MCC',  'F1')
+  #------------------------------------------------------------
+  ## End: Create the format for result
+  #------------------------------------------------------------
+  
+  for (net.idx in 1:length(unrolled.net.adj.matrices)) {
+    
+    predicted.net.adj.matrix <- unrolled.net.adj.matrices[[net.idx]]
+    
+    ResultVsTrue <- CalcPerfDiNet(predicted.net.adj.matrix, true.net.adj.matrices[[net.idx]])
+    Result <- rbind(Result, matrix(ResultVsTrue[1, ], nrow = 1, ncol = ncol(Result)))
+    
+    # rm(ResultVsTrue)
+  }
+  rm(net.idx)
+  
+  ## Print mean performance averaged over all time-varying networks
+  ResultVsTrue <- colMeans(Result)
+  ResultVsTrue <- matrix(colMeans(Result), nrow = 1, ncol = ncol(Result))
+  colnames(ResultVsTrue) <- colnames(Result)
+  # writeLines('Result EDISON vs True = \n')
+  print(ResultVsTrue)
+  rm(ResultVsTrue)
+  
+  return(Result)
+}
+###########################################################################

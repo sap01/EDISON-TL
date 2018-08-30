@@ -1,18 +1,18 @@
-## Goal: Given an EDISON output directory, produce a rolled net 
+## Goal: Given an EDISON output directory, produce an unrolled net 
 ##
 ###########################################################################################
-## Goal: Given one or more sets of time-varying nets, roll them into a 
-## single time-invariant net. Usually, each input set of time-varying nets
+## Goal: Given multiple sets of time-varying nets, aggregate them into a 
+## single set of time-varying nets. Usually, each input set of time-varying nets
 ## is inferred from a distinct time series.
 ##
 #' @title Convert a given unrolled Dynamic Bayesian Network (DBN) into a rolled DBN using different rolling methods.
 #' @param unrolled.net.adj.matrix.list Given time-varying network adjacency list. Its length = number of time-interval-specific nets. 
-#' @param roll.method Which rolling method to use from {'any', 'all', or some real number in (0, 1), like - 0.5}.
 #' @param allow.self.loop Boolean to decide whehter to allow self loop or not in the rolled DBN.
-#' @return rolled.net.adj.matrix Return the rolled DBN adjacency matrix.
+#' @param series.combn.method Which method to use for combining multiple time series from {'any', 'all', or some real number in (0, 1), like - 0.5}.
+#' @return output.unrolled.net Return the adjacency matrices of the unrolled DBN.
 ###########################################################################################
-OutdirToRolled <- function(out.dir.name, edge.post.prob.threshold, 
-                           roll.method, allow.self.loop, series.combn.method) {
+OutdirToUnrolled <- function(out.dir.name, edge.post.prob.threshold, 
+                             allow.self.loop, series.combn.method) {
   
   ##------------------------------------------------------------
   ## Begin: Load the Required Packages
@@ -26,8 +26,6 @@ OutdirToRolled <- function(out.dir.name, edge.post.prob.threshold,
   ## Begin: Load the Required External Functions
   ##------------------------------------------------------------
   init.path <- getwd()
-  
-  source(paste(init.path, 'unrolled_to_rolled.R', sep = '/'))
   ##------------------------------------------------------------
   ## End: Load the Required External Functions
   ##------------------------------------------------------------
@@ -42,37 +40,54 @@ OutdirToRolled <- function(out.dir.name, edge.post.prob.threshold,
   ## Names of the files that contain unrolled nets
   unrolled.net.file.names <- grep('unrolled.net.adj.matrices.[0-9]+.RData', out.dir.file.names, value = TRUE)
   rm(out.dir.file.names)
-
-  ## Initialize rolled net adjacency matrix
-  rolled.net.adj.matrix <- NULL
-    
+  
+  num.time.series <- length(unrolled.net.file.names)
+  
+  ## Initialize adjacency matrices of the unrolled net
+  output.unrolled.net <- NULL
+  
   for (unrolled.net.idx in 1:length(unrolled.net.file.names)) {
+    
+    ## Loads obj 'unrolled.net.adj.matrices' 
+    load(paste(out.dir.abs.path, unrolled.net.file.names[1], sep = '/'))
+    
+    ## A list of length = num of time pts.
+    ## Each element represnts the net adjacency matrix of the
+    ## corresponding time pt.
+    unrolled.net.adj.matrices <- unrolled.net.adj.matrices$probs.all
+    
+    for (time.pt.idx in 1:length(unrolled.net.adj.matrices)) {
+      
+      time.pt.spec.adj.matrix <- unrolled.net.adj.matrices[[time.pt.idx]]
+      
+      ## Remove edges with marginal posterior probability less than
+      ## 'edge.post.prob.threshold'
+      time.pt.spec.adj.matrix[time.pt.spec.adj.matrix < edge.post.prob.threshold] <- 0
+      
+      ## Convert 'time.pt.spec.adj.matrix' to a binary matrix of zeros and ones
+      time.pt.spec.adj.matrix[time.pt.spec.adj.matrix != 0] <- 1
+      
+      ## Remove self loops if 'allow.self.loop' = FALSE
+      if (!allow.self.loop) {
+        diag(time.pt.spec.adj.matrix) <- 0
+      }
+      
+      unrolled.net.adj.matrices[[time.pt.idx]] <- time.pt.spec.adj.matrix
+    }
+    rm(time.pt.idx)
     
     if (unrolled.net.idx == 1) {
       
-      ## Loads obj 'unrolled.net.adj.matrices' 
-      load(paste(out.dir.abs.path, unrolled.net.file.names[1], sep = '/'))
+      output.unrolled.net <- unrolled.net.adj.matrices
       
-      ## source(paste(init.path, 'unrolled_to_rolled.R', sep = '/'))
-      rolled.net.adj.matrix <- UnrolledToRolled(unrolled.net.adj.matrices, 
-                                                edge.post.prob.threshold,  
-                                                roll.method, 
-                                                allow.self.loop)
-      rm(unrolled.net.adj.matrices)
     } else {
       
-      ## Loads obj 'unrolled.net.adj.matrices' 
-      load(paste(out.dir.abs.path, unrolled.net.file.names[unrolled.net.idx], sep = '/'))
+      for (time.pt.idx in 1:length(output.unrolled.net)) {
+        output.unrolled.net[[time.pt.idx]] <- (output.unrolled.net[[time.pt.idx]] + 
+                                                 unrolled.net.adj.matrices[[time.pt.idx]])
+      }
+      rm(time.pt.idx)
       
-      ## source(paste(init.path, 'unrolled_to_rolled.R', sep = '/'))
-      rolled.net.adj.matrix.to.combine <- UnrolledToRolled(unrolled.net.adj.matrices, 
-                                                           edge.post.prob.threshold, 
-                                                           roll.method, 
-                                                           allow.self.loop)
-      
-      rm(unrolled.net.adj.matrices)
-      
-      rolled.net.adj.matrix <- rolled.net.adj.matrix + rolled.net.adj.matrix.to.combine
     }
   }
   rm(unrolled.net.idx)
@@ -90,7 +105,7 @@ OutdirToRolled <- function(out.dir.name, edge.post.prob.threshold,
     } else if (series.combn.method == 'all') {
       ## Insert an edge in the final rolled net iff 
       ## it is present in all interim rolled nets
-      series.combn.threshold <- length(unrolled.net.file.names)
+      series.combn.threshold <- num.time.series
     }
   } else if (is.numeric(series.combn.method)) {
     ## Insert an edge in the final lrolled net iff it is present in at least 
@@ -98,7 +113,7 @@ OutdirToRolled <- function(out.dir.name, edge.post.prob.threshold,
     ## interim rolled nets
     
     if ((series.combn.method > 0) & (series.combn.method < 1)) {
-      series.combn.threshold <- series.combn.method * length(unrolled.net.file.names)
+      series.combn.threshold <- (series.combn.method * num.time.series)
     } else {
       # print('\'series.combn.method\' accepts numeric values in the interval (0,1)')
       stop('\'series.combn.method\' accepts numeric values in the interval (0,1)')
@@ -107,20 +122,18 @@ OutdirToRolled <- function(out.dir.name, edge.post.prob.threshold,
   ##------------------------------------------------------------
   ## End: Evaluate the time-series combination threshold
   ##------------------------------------------------------------
-
-  ## Apply the time-series combination threshold on the rolled net adjacency matrix
-  for (tgt.node.idx in 1:ncol(rolled.net.adj.matrix)) {
-    for (src.node.idx in 1:nrow(rolled.net.adj.matrix)) {
-      if (rolled.net.adj.matrix[src.node.idx, tgt.node.idx] >= series.combn.threshold) {
-        rolled.net.adj.matrix[src.node.idx, tgt.node.idx] <- 1
-      } else {
-        rolled.net.adj.matrix[src.node.idx, tgt.node.idx] <- 0
-      }
-    }
-    rm(src.node.idx)
-  }
-  rm(tgt.node.idx)
   
-  return(rolled.net.adj.matrix)
+  ## Apply the time-series combination threshold on the unrolled net adjacency matrices
+  for (time.pt.idx in 1:length(output.unrolled.net)) {
+    time.pt.spec.adj.matrix <- output.unrolled.net[[time.pt.idx]]
+    time.pt.spec.adj.matrix[time.pt.spec.adj.matrix < series.combn.threshold] <- 0
+    time.pt.spec.adj.matrix[time.pt.spec.adj.matrix != 0] <- 1
+    
+    output.unrolled.net[[time.pt.idx]] <- time.pt.spec.adj.matrix
+    
+  }
+  rm(time.pt.idx)
+  
+  return(output.unrolled.net)
 }
 ###########################################################################################
