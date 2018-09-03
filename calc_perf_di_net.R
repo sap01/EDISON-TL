@@ -68,27 +68,48 @@ CalcPerfDiNet <-function(predicted.net.adj.matrix, true.net.adj.matrix)
   #------------------------------------------------------------
   TPR <- TrPos/(TrPos + FlNeg)
   FPR <- FlPos/(FlPos + TrNeg)
-  FDR <- FlPos/(FlPos + TrPos)
   
-  PPV <- TrPos/(TrPos + FlPos)
-  ## If there is no positive i.e. 
-  ## TrPos = FlPos = 0
-  if (is.nan(PPV)) {
+  ## Calculate FDR
+  FDR <- NULL
+  if ((FlPos == 0) & (TrPos == 0)) {
+    FDR <- 0
+  } else {
+    FDR <- FlPos/(FlPos + TrPos)
+  }
+  
+  ## Calculate PPV
+  PPV <- NULL
+  if ((FlPos == 0) & (TrPos == 0)) {
     PPV <- 0
+  } else {
+    PPV <- TrPos/(TrPos + FlPos)
   }
   
   ACC <- (TrPos + TrNeg)/(TrPos + FlPos + TrNeg + FlNeg)
-  MCC <- ((TrPos * TrNeg) - (FlNeg * FlPos)) / sqrt((TrPos + FlPos) * (TrPos + FlNeg) * (TrNeg + FlPos) * (TrNeg+FlNeg))
   
-  ## Begin: Evaluate F1 score
+  ## Calculate F1-score
   F1 <- NULL
-  if ((PPV + TPR) != 0) {
-    F1 <- (2 * PPV * TPR) / (PPV + TPR)
-  } else {
-    ## Ref: https://github.com/dice-group/gerbil/wiki/Precision,-Recall-and-F1-measure
+  if ((PPV == 0) & (TPR == 0)) {
+    
     F1 <- 0
+    ## Ref: https://github.com/dice-group/gerbil/wiki/Precision,-Recall-and-F1-measure
+    
+  } else {
+    F1 <- 2 * PPV * TPR / (PPV + TPR)
   }
-  ## End: Evaluate F1 score
+  
+  ## Calculate MCC.
+  ## '((TrPos == 0) & (FlPos == 0))' => Null graph.
+  ## '((TrNeg == 0) & (FlNeg == 0))' => Complete graph.
+  MCC <- NULL
+  if (((TrPos == 0) & (FlPos == 0)) | ((TrNeg == 0) & (FlNeg == 0))) {
+    
+    MCC <- 0
+    ## Ref: https://lettier.github.io/posts/2016-08-05-matthews-correlation-coefficient.html
+    
+  } else {
+    MCC <- ((TrPos * TrNeg) - (FlNeg * FlPos)) / sqrt((TrPos + FlPos) * (TrPos + FlNeg) * (TrNeg + FlPos) * (TrNeg+FlNeg))
+  }
   
   ## Calculate AUC under ROC
   # table <- minet::validate(predicted.net.adj.matrix, true.net.adj.matrix)
