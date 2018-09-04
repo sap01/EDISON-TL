@@ -7,3 +7,6 @@ packrat/lib*/
 ## Data files
 asset/*.RData
 asset/*.tsv
+
+## Output files
+asset/output*/
