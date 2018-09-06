@@ -1,0 +1,7 @@
+{ 
+   "input.data.filename": "edi-data-3.tsv",
+   "num.timepts": 20,
+   "num.time.series": 15,
+   "info.sharing.prior": "exp_soft",
+   "num.iters": 10000
+}
